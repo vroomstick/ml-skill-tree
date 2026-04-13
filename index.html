@@ -105,12 +105,39 @@ pre.cb{background:#0d1117;border:1px solid #21262d;border-radius:8px;padding:12p
 .btn-l:hover{background:#3fb95018}
 .btn-l.is-done{background:#3fb950;color:#0d1117}
 #toast{display:none;position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#3fb950;color:#0d1117;padding:8px 20px;border-radius:8px;font-size:13px;font-weight:600;z-index:200}
+.mock-overlay{display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,.85);z-index:300;overflow-y:auto}
+.mock-overlay.open{display:flex;align-items:flex-start;justify-content:center;padding:40px 20px}
+.mock-panel{background:#161b22;border:1px solid #30363d;border-radius:16px;max-width:700px;width:100%;padding:24px;position:relative}
+.mock-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.mock-header h2{font-size:18px;color:#fff;font-weight:600}
+.mock-timer{font-size:16px;font-weight:600;color:#f85149;font-family:'SF Mono',monospace}
+.mock-progress{font-size:12px;color:#8b949e;margin-bottom:12px}
+.mock-cat{font-size:10px;font-weight:600;padding:3px 10px;border-radius:20px;margin-bottom:12px;display:inline-block}
+.mock-q{background:#0d1117;border:1px solid #21262d;border-radius:10px;padding:16px;margin-bottom:12px}
+.mock-q .mql{font-size:10px;font-weight:700;color:#f0883e;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px}
+.mock-q .mqt{font-size:15px;color:#e6edf3;line-height:1.5;font-weight:500}
+.mock-a{background:#0d1117;border:1px solid #3fb95033;border-radius:10px;padding:16px;margin-bottom:12px;display:none}
+.mock-a.show{display:block;animation:slideD .2s}
+.mock-a .mal{font-size:10px;font-weight:700;color:#3fb950;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px}
+.mock-a .mat{font-size:13px;color:#b1bac4;line-height:1.6}
+.mock-trap{background:#0d1117;border:1px solid #f8514933;border-radius:10px;padding:16px;margin-bottom:12px;display:none}
+.mock-trap.show{display:block;animation:slideD .2s}
+.mock-trap .mtl{font-size:10px;font-weight:700;color:#f85149;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px}
+.mock-trap .mtt{font-size:13px;color:#b1bac4;line-height:1.6}
+.mock-btns{display:flex;gap:8px;flex-wrap:wrap}
+.mock-score{text-align:center;padding:20px}
+.mock-score h2{font-size:28px;color:#fff;margin-bottom:8px}
+.mock-score .grade{font-size:48px;font-weight:700;margin:12px 0}
+.mock-score p{font-size:14px;color:#8b949e;line-height:1.6}
+.mock-misses{margin-top:16px;text-align:left}
+.mock-misses h3{font-size:12px;font-weight:700;color:#f85149;text-transform:uppercase;margin-bottom:8px}
+.mock-misses .mm{font-size:12px;color:#b1bac4;padding:4px 0}
 </style>
 </head>
 <body>
 <div class="page">
 <h1>ML skill tree v4 — full depth</h1>
-<p class="sub">62 concepts. Every paragraph from your 44-page guide. Quiz mode. Spaced repetition. Videos. Code. Drawing prompts.</p>
+<p class="sub">43 concepts. Full guide depth. Mock interview mode. Misconception traps. Spaced repetition. Videos. Code. Drawing prompts.</p>
 <div class="pbar"><span class="lbl" id="p-l">0/62</span><div class="track"><div class="fill" id="p-f" style="width:0%"></div></div><span class="pct" id="p-p">0%</span></div>
 <div class="rbanner" id="rb">🔄 <span id="rc">0</span> reviews due <button onclick="jumpReview()" style="background:none;border:none;color:#f0883e;text-decoration:underline;cursor:pointer;font-size:12px">Jump</button></div>
 <div class="legend">
@@ -121,6 +148,7 @@ pre.cb{background:#0d1117;border:1px solid #21262d;border-radius:8px;padding:12p
 <div class="legend-i"><div class="legend-d" style="background:#3fb950"></div>Applied</div>
 </div>
 <div class="ctrls">
+<button onclick="startMock()" style="border-color:#f85149;color:#f85149;font-weight:600">Mock Interview (10 Qs, timed)</button>
 <button onclick="exportP()" style="border-color:#3fb950;color:#3fb950">Export progress</button>
 <button onclick="document.getElementById('imp').click()" style="border-color:#58a6ff;color:#58a6ff">Import progress</button>
 <button onclick="showReviews()">Reviews due</button>
@@ -131,6 +159,9 @@ pre.cb{background:#0d1117;border:1px solid #21262d;border-radius:8px;padding:12p
 <div class="dp" id="detail"></div>
 </div>
 <div id="toast"></div>
+<div class="mock-overlay" id="mock-overlay">
+<div class="mock-panel" id="mock-panel"></div>
+</div>
 <script>
 const CC={foundation:"#f85149",coreml:"#f0883e",dl:"#a371f7",modern:"#58a6ff",applied:"#3fb950"};
 const CL={foundation:"Foundation",coreml:"Core ML",dl:"Deep learning",modern:"Modern AI",applied:"Applied"};
@@ -686,7 +717,7 @@ function isDone(id){return!!done[id]}
 function needsR(id){if(!done[id])return false;const h=(Date.now()-done[id].ts)/(1e3*3600);const l=done[id].sl||0;return l<SRI.length&&h>=SRI[l]}
 function updP(){const t=N.length,c=Object.keys(done).length,p=Math.round(c/t*100);document.getElementById('p-l').textContent=`${c}/${t}`;document.getElementById('p-p').textContent=p+'%';document.getElementById('p-f').style.width=p+'%';const rc=N.filter(n=>needsR(n.id)).length;const rb=document.getElementById('rb');if(rc>0){rb.classList.add('show');document.getElementById('rc').textContent=rc}else rb.classList.remove('show')}
 function render(){const c=document.getElementById('tree');c.innerHTML='';const lvs=[...new Set(N.map(n=>n.lv))].sort((a,b)=>a-b);lvs.forEach(lv=>{const items=N.filter(n=>n.lv===lv);const d=document.createElement('div');d.className='level';d.innerHTML=`<div class="lv-hdr"><span class="lv-num">${lv}</span><span class="lv-title">${LT[lv]||''}</span><span class="lv-line"></span></div>`;const row=document.createElement('div');row.className='node-row';items.forEach(node=>{const dn=isDone(node.id),sl=selId===node.id,rv=needsR(node.id);const card=document.createElement('div');card.className='node'+(dn?' done':'')+(sl?' selected':'')+(rv?' review':'');card.id='n-'+node.id;if(dn||sl)card.style.borderColor=CC[node.cat];let h=`<div class="nm"><span class="dot" style="background:${CC[node.cat]}"></span>${node.name}</div><div class="ds">${node.desc}</div>`;if(rv)h+=`<span class="rv-badge">Review due</span>`;card.innerHTML=h;card.onclick=()=>{selId=selId===node.id?null:node.id;render();showD()};row.appendChild(card)});d.appendChild(row);c.appendChild(d)});updP()}
-function showD(){const p=document.getElementById('detail');if(!selId){p.classList.remove('open');p.innerHTML='';return}const n=gn(selId),col=CC[n.cat],dn=isDone(n.id),ch=gc(n.id),rv=needsR(n.id);p.innerHTML=`<div class="dp-hdr"><div><span class="dp-title">${n.name}</span><span class="dp-badge" style="background:${col}18;color:${col};border:1px solid ${col}44">${CL[n.cat]} · Level ${n.lv}</span>${rv?`<span class="dp-badge" style="background:#f0883e18;color:#f0883e;border:1px solid #f0883e44;margin-left:4px">Review due</span>`:''}</div><button class="dp-close" onclick="selId=null;render();showD()">&times;</button></div><div class="tabs"><div class="tab active" onclick="swT(this,'learn')">Learn</div><div class="tab" onclick="swT(this,'quiz')">Quiz me</div><div class="tab" onclick="swT(this,'practice')">Practice</div></div><div class="tc active" id="tab-learn"><div class="dp-grid"><div class="bx what"><h3>What is it (full depth)</h3><p>${n.w}</p></div><div class="bx why"><h3>Why it matters</h3><p>${n.why}</p></div><div class="bx hot"><h3>Interview hot take</h3><p>${n.hot}</p></div><div class="bx guide"><h3>Guide reference</h3><p>${n.guide}</p></div></div></div><div class="tc" id="tab-quiz"><div class="qq"><div class="ql">Main question</div><div class="qt">${n.quiz.q}</div></div><button class="qbtn rv-btn" onclick="document.getElementById('ma').classList.add('show');this.style.display='none'">Think, then reveal answer</button><div class="qa" id="ma"><div class="al">Model answer</div><div class="at">${n.quiz.a}</div></div>${n.followups.length?'<div class="fu"><div style="font-size:10px;font-weight:700;color:#f0883e;text-transform:uppercase;letter-spacing:.8px;margin:12px 0 8px">Follow-ups (click to reveal)</div>'+n.followups.map((f,i)=>`<div class="fq" onclick="this.nextElementSibling.classList.toggle('show')"><div class="fl">Follow-up ${i+1}</div><div class="ft">${f.q}</div></div><div class="fa">${f.a}</div>`).join('')+'</div>':''}<div style="margin-top:12px"><button class="qbtn gt-btn" onclick="markL('${n.id}')">I can explain this ✓</button><button class="qbtn ms-btn" onclick="markM('${n.id}')">Need more practice</button></div></div><div class="tc" id="tab-practice"><div class="ps"><h3 class="vid">Watch these</h3>${n.videos.map(v=>`<a class="vl" href="${v.u}" target="_blank">${v.t}<span class="vc">${v.c}</span></a>`).join('')}</div><div class="ps"><h3 class="code">Run this code</h3><pre class="cb">${n.code}</pre></div><div class="ps"><h3 class="draw">Draw this on paper</h3><div class="drw">${n.draw}</div></div><div class="ps"><h3 class="act">Action items</h3><ul class="al">${n.actions.map(a=>`<li>${a}</li>`).join('')}</ul></div></div><div class="dp-prereqs"><span class="ll">Prerequisites:</span>${n.prereqs.length===0?'<span style="font-size:12px;color:#8b949e">None — start here!</span>':n.prereqs.map(pid=>{const pn=gn(pid);return`<span class="dp-tag prereq${isDone(pid)?' done-t':''}" onclick="selId='${pid}';render();showD()">${pn.name}</span>`}).join('')}</div><div class="dp-prereqs"><span class="ll">Unlocks:</span>${ch.length===0?'<span style="font-size:12px;color:#8b949e">Endpoint</span>':ch.map(c=>`<span class="dp-tag unlocks" onclick="selId='${c.id}';render();showD()">${c.name}</span>`).join('')}</div>`;p.classList.add('open');p.scrollIntoView({behavior:'smooth',block:'nearest'})}
+function showD(){const p=document.getElementById('detail');if(!selId){p.classList.remove('open');p.innerHTML='';return}const n=gn(selId),col=CC[n.cat],dn=isDone(n.id),ch=gc(n.id),rv=needsR(n.id);p.innerHTML=`<div class="dp-hdr"><div><span class="dp-title">${n.name}</span><span class="dp-badge" style="background:${col}18;color:${col};border:1px solid ${col}44">${CL[n.cat]} · Level ${n.lv}</span>${rv?`<span class="dp-badge" style="background:#f0883e18;color:#f0883e;border:1px solid #f0883e44;margin-left:4px">Review due</span>`:''}</div><button class="dp-close" onclick="selId=null;render();showD()">&times;</button></div><div class="tabs"><div class="tab active" onclick="swT(this,'learn')">Learn</div><div class="tab" onclick="swT(this,'quiz')">Quiz me</div><div class="tab" onclick="swT(this,'practice')">Practice</div></div><div class="tc active" id="tab-learn"><div class="dp-grid"><div class="bx what"><h3>What is it (full depth)</h3><p>${n.w}</p></div><div class="bx why"><h3>Why it matters</h3><p>${n.why}</p></div><div class="bx hot"><h3>Interview hot take</h3><p>${n.hot}</p></div><div class="bx guide"><h3>Guide reference</h3><p>${n.guide}</p></div></div></div><div class="tc" id="tab-quiz"><div class="qq"><div class="ql">Main question</div><div class="qt">${n.quiz.q}</div></div><button class="qbtn rv-btn" onclick="document.getElementById('ma').classList.add('show');document.querySelectorAll('.trap-box,.xfu').forEach(e=>e.classList.add('show'));this.style.display='none'">Think, then reveal answer</button><div class="qa" id="ma"><div class="al">Model answer</div><div class="at">${n.quiz.a}</div></div>${TRAPS[n.id]?`<div class="mock-trap trap-box"><div class="mtl">Common misconception trap</div><div class="mtt">${TRAPS[n.id]}</div></div>`:''}${(()=>{const all=[...n.followups,...(EXTRA_FU[n.id]||[])];return all.length?'<div class="fu"><div style="font-size:10px;font-weight:700;color:#f0883e;text-transform:uppercase;letter-spacing:.8px;margin:12px 0 8px">Follow-ups (click to reveal)</div>'+all.map((f,i)=>`<div class="fq" onclick="this.nextElementSibling.classList.toggle(\'show\')"><div class="fl">Follow-up ${i+1}</div><div class="ft">${f.q}</div></div><div class="fa">${f.a}</div>`).join('')+'</div>':'';})()}<div style="margin-top:12px"><button class="qbtn gt-btn" onclick="markL('${n.id}')">I can explain this ✓</button><button class="qbtn ms-btn" onclick="markM('${n.id}')">Need more practice</button></div></div><div class="tc" id="tab-practice"><div class="ps"><h3 class="vid">Watch these</h3>${n.videos.map(v=>`<a class="vl" href="${v.u}" target="_blank">${v.t}<span class="vc">${v.c}</span></a>`).join('')}</div><div class="ps"><h3 class="code">Run this code</h3><pre class="cb">${n.code}</pre></div><div class="ps"><h3 class="draw">Draw this on paper</h3><div class="drw">${n.draw}</div></div><div class="ps"><h3 class="act">Action items</h3><ul class="al">${n.actions.map(a=>`<li>${a}</li>`).join('')}</ul></div></div><div class="dp-prereqs"><span class="ll">Prerequisites:</span>${n.prereqs.length===0?'<span style="font-size:12px;color:#8b949e">None — start here!</span>':n.prereqs.map(pid=>{const pn=gn(pid);return`<span class="dp-tag prereq${isDone(pid)?' done-t':''}" onclick="selId='${pid}';render();showD()">${pn.name}</span>`}).join('')}</div><div class="dp-prereqs"><span class="ll">Unlocks:</span>${ch.length===0?'<span style="font-size:12px;color:#8b949e">Endpoint</span>':ch.map(c=>`<span class="dp-tag unlocks" onclick="selId='${c.id}';render();showD()">${c.name}</span>`).join('')}</div>`;p.classList.add('open');p.scrollIntoView({behavior:'smooth',block:'nearest'})}
 function swT(el,id){document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.tc').forEach(t=>t.classList.remove('active'));el.classList.add('active');document.getElementById('tab-'+id).classList.add('active')}
 function markL(id){const ex=done[id];done[id]={ts:Date.now(),sl:ex?Math.min((ex.sl||0)+1,SRI.length):0};localStorage.setItem('mltree4-done',JSON.stringify(done));render();showD()}
 function markM(id){if(done[id]){done[id].sl=0;done[id].ts=Date.now()}localStorage.setItem('mltree4-done',JSON.stringify(done));alert('Rewatch videos, run code, try quiz again tomorrow.')}
@@ -697,6 +728,177 @@ function toast(m){const t=document.getElementById('toast');t.textContent=m;t.sty
 function exportP(){const d={v:4,date:new Date().toISOString(),progress:done,total:N.length,done:Object.keys(done).length};const b=new Blob([JSON.stringify(d,null,2)],{type:'application/json'});const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=`ml-tree-${new Date().toISOString().slice(0,10)}.json`;a.click();URL.revokeObjectURL(u);toast('Exported!')}
 function importP(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=function(ev){try{const d=JSON.parse(ev.target.result);if(d.progress&&confirm(`Import ${Object.keys(d.progress).length} concepts?`)){done=d.progress;localStorage.setItem('mltree4-done',JSON.stringify(done));selId=null;render();showD();toast('Imported!')}}catch(err){alert('Error: '+err.message)}};r.readAsText(f);e.target.value=''}
 window.addEventListener('beforeunload',()=>localStorage.setItem('mltree4-done',JSON.stringify(done)));
+
+// ═══ MISCONCEPTION TRAPS (common wrong answers interviewers catch) ═══
+const TRAPS={
+probability:"TRAP: 'p-value = probability the null is true.' WRONG. It's 'probability of this data IF null is true.' Also: P(A|B) ≠ P(B|A) — the prosecutor's fallacy.",
+distributions:"TRAP: 'Everything is normally distributed.' WRONG. CLT says sample MEANS are normal, not the data itself. Also: 'n=30 makes anything normal' — 30 is a rough guideline, not a rule.",
+hypothesis:"TRAP: '95% confidence interval means 95% chance the true value is inside.' WRONG. It means if you repeated the experiment 100 times, ~95 intervals would contain it. Also: statistical significance ≠ practical significance.",
+bias_var:"TRAP: 'More complex models are always better.' WRONG. They reduce bias but increase variance. Also: 'Good training accuracy means the model works' — could be overfitting.",
+loss_fn:"TRAP: 'Just use MSE for everything.' WRONG for classification — non-convex with sigmoid. Also: 'Lower loss always means better model' — could be overfitting to training data.",
+log_reg:"TRAP: 'Logistic regression is a regression algorithm.' It predicts a continuous value (log-odds) but is used for CLASSIFICATION. Also: 'Higher accuracy = better model' — not with imbalanced data.",
+regularization:"TRAP: 'L1 and L2 do the same thing.' WRONG. L1 zeros out weights (feature selection), L2 just shrinks them. The geometry (diamond vs circle) is WHY.",
+class_metrics:"TRAP: 'High accuracy = good model.' WRONG for imbalanced data. Also: 'AUC = 0.5 means the model is random' — yes, but AUC > 0.5 doesn't mean it's useful (could still have terrible precision).",
+neural_net:"TRAP: 'More layers = better.' WRONG — vanishing gradients, overfitting. Also: 'Neural nets find the global minimum.' They don't — loss is non-convex. They find local minima that are usually good enough.",
+cnn:"TRAP: 'CNNs only work for images.' WRONG — also used for 1D signals (audio, time series) and even text. Also: 'The network designer chooses what kernels detect.' WRONG — the network LEARNS what to detect.",
+rnn_lstm:"TRAP: 'LSTMs solve the vanishing gradient problem completely.' They mitigate it significantly but can still struggle with very long sequences. Transformers handle long-range better.",
+attention:"TRAP: 'Attention replaces everything else in the network.' WRONG — attention computes relevance weights, but FFN layers (which are most of the parameters) store the actual knowledge.",
+transformer:"TRAP: 'Transformers understand word order naturally.' WRONG — they process all positions simultaneously with NO inherent order. Positional encoding must be added explicitly.",
+bert:"TRAP: 'BERT can generate text.' WRONG — BERT is encoder-only (bidirectional). It understands text but can't generate. GPT generates. Also: 'Fine-tuning = training from scratch.' WRONG — you're adjusting a pre-trained model.",
+gpt:"TRAP: 'LLMs understand and reason.' Debatable — they predict likely next tokens. They produce text that LOOKS like reasoning. Also: 'RLHF makes the model truthful.' It makes it more aligned with human preferences, not necessarily more factual.",
+rag:"TRAP: 'RAG eliminates hallucination.' WRONG — it reduces it by grounding in documents, but the LLM can still hallucinate or misinterpret retrieved context. Also: 'More retrieved chunks = better.' Too many chunks dilute with irrelevant context.",
+cross_val:"TRAP: 'Cross-validation prevents overfitting.' WRONG — it DETECTS overfitting by giving reliable performance estimates. The model can still overfit within each fold.",
+xgboost:"TRAP: 'XGBoost is always better than Random Forest.' NOT always — RF is more robust with less tuning, handles noisy data better, and is faster to train. XGBoost needs careful hyperparameter tuning."
+};
+
+// ═══ EXTRA FOLLOW-UPS for deeper probing ═══
+const EXTRA_FU={
+attention:[
+{q:"What happens if you DON'T scale by √d_k?",a:"Dot products grow proportionally to dimension d. For d=512, the sum of 512 multiplications produces large values. Softmax on large values produces near-one-hot distributions (one position gets ~1.0, rest ~0.0). Gradients in these saturated regions are near zero → learning stalls. Scaling by √d keeps values in a range where softmax produces meaningful, learnable distributions."},
+{q:"How would you modify attention for very long sequences?",a:"Standard attention is O(n²). For long sequences: Sparse attention (attend only to local windows + global tokens), Sliding window attention (each token attends to k nearest neighbors), Flash Attention (memory-efficient implementation, same math but avoids materializing the n×n attention matrix), Linear attention (approximate attention in O(n) with kernel tricks). These enable 100K+ token context windows."},
+{q:"If attention can look at everything, why do we need multiple layers?",a:"One attention layer computes direct pairwise relationships. Multiple layers build COMPOSITIONAL understanding: layer 1 might learn 'it refers to animal,' layer 2 uses that to understand 'it was tired means the animal was tired,' layer 3 uses that for the full sentence meaning. Each layer refines and combines the representations from the previous layer."}
+],
+transformer:[
+{q:"What's the role of the feed-forward network in each Transformer layer?",a:"The FFN (two dense layers with ReLU) is applied to each position independently. It's where the model stores and retrieves 'knowledge' — factual associations, learned patterns. The attention layers route information between positions; the FFN layers process information AT each position. FFN layers contain most of the model's parameters."},
+{q:"What happens during the very first token of generation?",a:"The model receives just the prompt tokens. It processes them all through the Transformer (encoder or decoder depending on architecture), computes attention across all prompt tokens, and outputs a probability distribution over the vocabulary for the next token. The first generated token sets the direction for everything that follows — which is why prompt engineering matters so much."}
+],
+bert:[
+{q:"Why mask 80/10/10 instead of 100% [MASK]?",a:"If always [MASK], the model only learns to predict [MASK] tokens — but at fine-tuning/inference, there are no [MASK] tokens. The 10% random replacement teaches robustness to noise. The 10% unchanged teaches the model that it sometimes needs to reconstruct the original word. This bridges the gap between pre-training and downstream use."},
+{q:"How does fine-tuning BERT differ from training from scratch?",a:"From scratch: random weights, needs millions of examples, learns language AND your task simultaneously. Fine-tuning: weights already encode deep language understanding from pre-training on billions of words. Your small dataset (even thousands of examples) just teaches the specific task — sentiment, NER, QA. The pre-trained knowledge transfers. It's like hiring an English speaker vs teaching a baby English AND legal writing."}
+],
+gpt:[
+{q:"What is DPO and why is it replacing RLHF?",a:"DPO (Direct Preference Optimization) skips the reward model entirely. Instead of: train reward model → use PPO to optimize against it, DPO directly optimizes the language model on preference pairs. It treats the LM itself as the reward model via a clever mathematical reformulation. Benefits: simpler pipeline (no reward model training, no RL instability), more stable training, similar results. Drawback: less flexible than RLHF for complex reward shaping."},
+{q:"What are emergent abilities and why are they controversial?",a:"Abilities that appear suddenly at scale — small models can't do them at all, large models can (chain-of-thought, in-context learning). Controversial because: some researchers argue it's an artifact of metric choice (using accuracy which has a sharp threshold vs log-likelihood which improves smoothly). The debate matters because it affects whether we can predict what future models will be able to do."}
+],
+loss_fn:[
+{q:"Why does cross-entropy correspond to maximum likelihood estimation?",a:"MLE asks: what parameters make my data most likely? For binary classification with Bernoulli outcomes, the likelihood is: Π ŷᵢʸⁱ × (1-ŷᵢ)^(1-yᵢ). Taking the negative log gives: -Σ[yᵢ log(ŷᵢ) + (1-yᵢ) log(1-ŷᵢ)] — which IS binary cross-entropy. So minimizing cross-entropy = maximizing likelihood under Bernoulli assumption. Similarly, minimizing MSE = maximizing likelihood under Gaussian noise assumption."},
+{q:"When would you use contrastive or triplet loss?",a:"When you're learning an embedding space where similar things should be close and dissimilar things far apart. Contrastive: pairs of examples (similar/dissimilar). Triplet: anchor + positive + negative, requires distance(anchor,positive) + margin < distance(anchor,negative). Used in face recognition (FaceNet), sentence similarity (Sentence-BERT), and your Infera project (FinBERT was trained with objectives that shape the embedding space this way)."}
+],
+bias_var:[
+{q:"Can you have high bias AND high variance simultaneously?",a:"Rarely in the classical sense, but yes with a poorly chosen model. Example: fitting a high-degree polynomial to one region of data and a constant to another. More commonly, you see one dominating. The key insight is that as you move along the complexity axis, you trade one for the other. Cross-validation lets you find the sweet spot empirically."},
+{q:"How does ensemble learning relate to bias-variance?",a:"Bagging (Random Forest) reduces variance: averaging many high-variance models cancels individual noise. Boosting (XGBoost) reduces bias: each model corrects the previous one's systematic errors. Stacking can reduce both: diverse models capture different patterns, meta-model learns optimal combination. This is why ensembles almost always outperform single models."}
+],
+rf:[
+{q:"Why does each tree only see ~63% of the data?",a:"Bootstrap sampling draws n samples WITH replacement from n total. The probability of any single sample NOT being selected in n draws is (1-1/n)^n ≈ e^(-1) ≈ 0.37. So ~37% is left out (out-of-bag), and ~63% is used. The replacement means some samples appear multiple times, giving each tree a slightly different view of the data — which is the whole point of bagging."},
+{q:"How does permutation importance differ from Gini importance?",a:"Gini importance: how much each feature reduces impurity across all splits in all trees. Fast but biased toward high-cardinality features (features with many unique values get more split opportunities). Permutation importance: shuffle each feature's values and measure accuracy drop. Unbiased and model-agnostic, but slower. Use permutation importance for reliable feature selection."}
+]
+};
+
+// ═══ MOCK INTERVIEW ENGINE ═══
+let mockState = null;
+
+function startMock(){
+const shuffled = [...N].sort(()=>Math.random()-0.5);
+mockState = {
+    questions: shuffled.slice(0, 10),
+    current: 0,
+    score: 0,
+    misses: [],
+    startTime: Date.now(),
+    qStartTime: Date.now()
+};
+renderMockQ();
+document.getElementById('mock-overlay').classList.add('open');
+startMockTimer();
+}
+
+function closeMock(){
+document.getElementById('mock-overlay').classList.remove('open');
+mockState = null;
+if(window._mockTimer) clearInterval(window._mockTimer);
+}
+
+function startMockTimer(){
+if(window._mockTimer) clearInterval(window._mockTimer);
+window._mockTimer = setInterval(()=>{
+    if(!mockState) return;
+    const el = document.getElementById('mock-time');
+    if(!el) return;
+    const elapsed = Math.floor((Date.now() - mockState.qStartTime) / 1000);
+    const mins = Math.floor(elapsed / 60);
+    const secs = elapsed % 60;
+    el.textContent = `${mins}:${secs.toString().padStart(2,'0')}`;
+    if(elapsed > 180) el.style.color = '#f85149';
+}, 1000);
+}
+
+function renderMockQ(){
+const panel = document.getElementById('mock-panel');
+if(mockState.current >= mockState.questions.length){
+    renderMockScore(); return;
+}
+const n = mockState.questions[mockState.current];
+const col = CC[n.cat];
+const trap = TRAPS[n.id] || '';
+const extraFu = EXTRA_FU[n.id] || [];
+const allFu = [...n.followups, ...extraFu];
+const randomFu = allFu.length > 0 ? allFu[Math.floor(Math.random()*allFu.length)] : null;
+
+panel.innerHTML = `
+<div class="mock-header">
+    <h2>Mock Interview</h2>
+    <div><span class="mock-timer" id="mock-time">0:00</span></div>
+</div>
+<div class="mock-progress">Question ${mockState.current+1} of ${mockState.questions.length} · Score: ${mockState.score}/${mockState.current}</div>
+<span class="mock-cat" style="background:${col}18;color:${col};border:1px solid ${col}44">${n.name}</span>
+<div class="mock-q"><div class="mql">Interviewer asks:</div><div class="mqt">${n.quiz.q}</div></div>
+<button class="qbtn rv-btn" id="mock-reveal" onclick="
+    document.getElementById('mock-ans').classList.add('show');
+    ${trap ? "document.getElementById('mock-trap-box').classList.add('show');" : ''}
+    ${randomFu ? "document.getElementById('mock-fu').classList.add('show');" : ''}
+    this.style.display='none';
+    document.getElementById('mock-grade').style.display='flex';
+">Think about your answer, then reveal</button>
+<div class="mock-a" id="mock-ans"><div class="mal">Model answer</div><div class="mat">${n.quiz.a}</div></div>
+${trap ? `<div class="mock-trap" id="mock-trap-box"><div class="mtl">Common misconception trap</div><div class="mtt">${trap}</div></div>` : ''}
+${randomFu ? `<div class="mock-a" id="mock-fu"><div class="mal">Follow-up: ${randomFu.q}</div><div class="mat">${randomFu.a}</div></div>` : ''}
+<div class="mock-btns" id="mock-grade" style="display:none;margin-top:12px">
+    <button class="qbtn gt-btn" onclick="mockGrade(true)">I nailed it ✓</button>
+    <button class="qbtn ms-btn" onclick="mockGrade(false)">I went blank / wrong ✗</button>
+</div>
+<div style="margin-top:16px;text-align:right"><button class="qbtn" style="border:1px solid #30363d;color:#8b949e" onclick="closeMock()">End interview</button></div>`;
+mockState.qStartTime = Date.now();
+}
+
+function mockGrade(passed){
+if(passed) mockState.score++;
+else mockState.misses.push(mockState.questions[mockState.current]);
+mockState.current++;
+renderMockQ();
+}
+
+function renderMockScore(){
+if(window._mockTimer) clearInterval(window._mockTimer);
+const pct = Math.round(mockState.score / mockState.questions.length * 100);
+const totalTime = Math.floor((Date.now() - mockState.startTime) / 1000);
+const mins = Math.floor(totalTime / 60);
+const secs = totalTime % 60;
+let grade, color, msg;
+if(pct >= 90){ grade='A+'; color='#3fb950'; msg='Interview ready. Go get that offer.'; }
+else if(pct >= 80){ grade='A'; color='#3fb950'; msg='Strong. Patch the gaps and you\'re there.'; }
+else if(pct >= 70){ grade='B'; color='#58a6ff'; msg='Decent foundation. Drill the misses.'; }
+else if(pct >= 50){ grade='C'; color='#f0883e'; msg='Getting there but real gaps remain. Keep studying.'; }
+else{ grade='F'; color='#f85149'; msg='Back to the tree. Watch the videos. Run the code. Try again tomorrow.'; }
+
+const panel = document.getElementById('mock-panel');
+panel.innerHTML = `
+<div class="mock-score">
+    <h2>Mock Interview Complete</h2>
+    <div class="grade" style="color:${color}">${grade}</div>
+    <p>${mockState.score} / ${mockState.questions.length} correct (${pct}%) in ${mins}m ${secs}s</p>
+    <p style="margin-top:8px;color:${color}">${msg}</p>
+    ${mockState.misses.length > 0 ? `
+    <div class="mock-misses">
+        <h3>Concepts to drill:</h3>
+        ${mockState.misses.map(n=>`<div class="mm">→ ${n.name}: ${n.quiz.q.slice(0,80)}...</div>`).join('')}
+    </div>` : ''}
+    <div style="margin-top:20px">
+        <button class="qbtn gt-btn" onclick="startMock()">Try again</button>
+        <button class="qbtn rv-btn" onclick="closeMock()">Back to tree</button>
+    </div>
+</div>`;
+}
+
 render();
 </script>
 </body>
